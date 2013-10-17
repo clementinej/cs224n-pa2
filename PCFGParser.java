@@ -51,26 +51,28 @@ public class PCFGParser implements Parser {
             }
         }
     }
+
     // build the grammar and its probabilities
     public void train(List<Tree<String>> trainTrees) {
+        getSymbols(grammar, nonterminals, lexicon);
         List<Tree<String>> binarizedTrees = new ArrayList<Tree<String>>();
         // binarize the trees so that rules are at most binary
         for (Tree<String> tree : trainTrees) {
             binarizedTrees.add(TreeAnnotations.annotateTree(tree));
         }
         System.out.println(trainTrees.toString());
+        // lexicon contains the preterminals and the words
         lexicon = new Lexicon(binarizedTrees);
         grammar = new Grammar(binarizedTrees);
     }
 
     public Tree<String> getBestParse(List<String> sentence) {
-        // TODO what should getBestParse do? Trace through the back pointers?
         Tree<String> bestParse = cky(sentence);
         return bestParse;
     }
 
-    public void handleUnaries(double[][][] score, double[][][] back, int i) {
-        //handle unaries, we already have probabilities in our cells
+    public void handleUnaries(double[][][] score, Triplet[][][] back, int i) {
+        // handle unaries, we already have probabilities in our cells
         boolean added = true;
         // keep applying unary rules until we stop discovering new constituents over a span
         // with better probabilities
@@ -87,8 +89,10 @@ public class PCFGParser implements Parser {
                         // if it's a better probability, store it in the back trace
                         if (prob > score[i][i + 1][nonterminals.get(r.parent)]) {
                             score[i][i + 1][nonterminals.get(r.parent)] = prob;
-                            // TODO not totally sure how the back pointers should be constructed
-                            back[i][i + 1][nonterminals.get(r.parent)] = prob;
+                            // TODO: this is wrong, see pseudocode for back ptr implementation
+                            // back[i][i+1][A] = B;
+                            Triplet backPtr = new Triplet(child, null, null);
+                            back[i][i + 1][nonterminals.get(r.parent)] = backPtr;
                             // if we've done work, do another iteration
                             added = true;
                         }
@@ -106,8 +110,12 @@ public class PCFGParser implements Parser {
         double[][][] score = new double[num_words + 1][num_words + 1][nonterminals.keySet().size()];
         // stores back pointers for each nonterminal over each span
         // represents the best way of building that probability over that span
-        // TODO: pseudo code suggests using a Triple?
-        double[][][] back = new double[num_words + 1][num_words + 1] [nonterminals.keySet().size()];
+        // TODO: pseudo code suggests using a Triplet?
+        // which two children to go to
+        // and where to look next
+        // split tells you where to look next
+        //
+        Triplet[][][] back = new Triplet[num_words + 1][num_words + 1][nonterminals.keySet().size()];
 
         // lexicon part - filling in nonterminals that words can rewrite as
         for (int i = 0; i < num_words; i++) {
@@ -115,16 +123,14 @@ public class PCFGParser implements Parser {
             for (String symbols : lexicon.getAllTags()) {
                 // if we've got a rule for a given nonterminal,
                 // e.g. if (symbol -> words[i] in grammar)
-                List<UnaryRule> rules = grammar.getUnaryRulesByChild(words.get(i));
-                for(UnaryRule r : rules) {
-                    double prob = r.getScore();
-                    // put it's score into that cell of the chart
-                    score[i][i+1][nonterminals.get(r.parent)] = prob;
-
-                }
+                //List<UnaryRule> rules = grammar.getUnaryRulesByChild(words.get(i));
+                double prob = lexicon.scoreTagging(words.get(i), symbols);
+                // put it's score into that cell of the chart
+                score[i][i + 1][nonterminals.get(symbols)] = prob;
             }
             handleUnaries(score, back, i);
         }
+
         // build the chart, ordering by the size of the constituent span
         for (int span = 2; span < num_words; span++) {
             // go accross the words from left to rightmost position
@@ -138,6 +144,9 @@ public class PCFGParser implements Parser {
                     BinaryRule rules_by_right;
                     // variable to hold the highest probability for a given parent
                     Double max_q;
+
+                    // TODO: update back ptrs with left child, right child symbol, and split
+                    // every time that you update the score array
 
                     // loop over the possible left children
                     for (int i = 0; i < score[begin][split].length; i++) {
@@ -173,11 +182,15 @@ public class PCFGParser implements Parser {
             // TODO: not sure exactly what to pass to handleUnaries
             handleUnaries(score, back, span);
         }
-        return buildTree(score, back);
+        return buildTree(back);
     }
 
-    public Tree buildTree(double[][][] score, double[][][] back) {
+    public Tree buildTree(Triplet[][][] back) {
         // follow back ptrs
+        // check whether a unary or binary rule by checking if the second value is null
+        // recursively? add start node?
+        // use set children to expand the tree
+        // each node is a tree that has children
         return null;
     }
 }
