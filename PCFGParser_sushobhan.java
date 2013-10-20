@@ -63,13 +63,13 @@ public class PCFGParser implements Parser {
 		List<UnaryRule> rules = grammar.getUnaryRulesByChild(child);
 		for (UnaryRule r : rules) {
 		    String parent = r.getParent();
-		    if (((score[i][j][nonterminals.get(r.getChild())]) > 0)) {
+		    if (score[i][j][nonterminals.get(child)] > 0) {
 			// returns a smoothed estimate of P(word|tag)
-			double prob = r.getScore()*score[i][j][nonterminals.get(r.getChild())];
+			double prob = r.getScore()*score[i][j][nonterminals.get(child)];
 			// if it's a better probability, store it in
 			//the back trace
-			if (prob > score[i][j][nonterminals.get(r.getParent())]){
-			    score[i][j][nonterminals.get(r.getParent())] = prob;
+			if (prob > score[i][j][nonterminals.get(parent)]){
+			    score[i][j][nonterminals.get(parent)] = prob;
 			    //TODO: back[i][j][r.parent] = B
 			    // if we've done work, do another iteration
 			    added = true;
@@ -96,20 +96,25 @@ public class PCFGParser implements Parser {
 	for (int span = 2; span <= numWords; span++) {
 	    for (int begin = 0; begin <= numWords-span; begin++) {
 		int end = begin+span;
-		for (int split=begin+1; split <= end-1; split++){
-		    Set<BinaryRule> binaryRules = new HashSet<BinaryRule>();
-		    // loop over the possible left children
-                    for (int i = 0; i < score[begin][split].length; i++)
-                        if (score[begin][split][i] != 0) 
-			    binaryRules.addAll(grammar.getBinaryRulesByLeftChild(nonterminals.get(i)));
-		    for (BinaryRule r : binaryRules){
-			double prob =
-			    score[begin][split][nonterminals.get(r.leftChild)]
-			    * score[split][end][r.rightChild] * r.getScore();
-			if (prob > score[begin][end][nonterminals.get(r.parent)]){
-			    score[begin][end][nonterminals.get(r.parent)]
-				= prob;
+		for (int split = begin+1; split <= end-1; split++){
+		    // Set<BinaryRule> binaryRules = new HashSet<BinaryRule>();
+		    // // loop over the possible left children
+                    // for (int i = 0; i < score[begin][split].length; i++)
+                    //     if (score[begin][split][i] != 0) 
+		    // 	    binaryRules.addAll(grammar.getBinaryRulesByLeftChild(nonterminals.get(i)));
+		    for (String tag : nonterminals.keySet()){
+			List<BinaryRule> binaryRules =
+			    grammar.getBinaryRulesByLeftChild(tag);
+			if (binaryRules == null) continue;
+			for (BinaryRule r : binaryRules){
+			    double prob =
+				score[begin][split][nonterminals.get(r.getLeftChild())]
+				* score[split][end][r.getRightChild()] * r.getScore();
+			    if (prob > score[begin][end][nonterminals.get(r.getParent())]){
+				score[begin][end][nonterminals.get(r.getParent())]
+				    = prob;
 			    // TODO: back pointer
+			    }
 			}
 		    }
 		}
