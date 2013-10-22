@@ -6,6 +6,7 @@ import java.util.List;
 
 import cs224n.ling.Tree;
 import cs224n.ling.Trees;
+import cs224n.ling.Trees.MarkovizationAnnotationStripper;
 import cs224n.util.Filter;
 
 /**
@@ -24,10 +25,34 @@ public class TreeAnnotations {
 
 		// TODO : mark nodes with the label of their parent nodes, giving a second
 		// order vertical markov process
-
+	    unAnnotatedTree = addParentTags(unAnnotatedTree, unAnnotatedTree.getLabel());
+	    //unAnnotatedTree = addParentTags2(unAnnotatedTree, unAnnotatedTree.getLabel(),"");
 		return binarizeTree(unAnnotatedTree);
 
 	}
+
+    private static Tree<String> addParentTags(Tree<String>
+					      unAnnotatedTree, String tag){
+	if (unAnnotatedTree.isLeaf()) return unAnnotatedTree;
+	List<Tree<String>> children = new ArrayList<Tree<String>>();
+	for (Tree<String> child : unAnnotatedTree.getChildren())
+	    children.add(addParentTags(child, unAnnotatedTree.getLabel()));
+	String newTag = tag.equals("ROOT") ? unAnnotatedTree.getLabel() : unAnnotatedTree.getLabel()+"^"+tag;
+	return new Tree<String>(newTag, children);
+    }
+
+    private static Tree<String> addParentTags2(Tree<String>
+					       unAnnotatedTree, String
+					       parent, String gparent){
+	if (unAnnotatedTree.isLeaf()) return unAnnotatedTree;
+	List<Tree<String>> children = new ArrayList<Tree<String>>();
+	for (Tree<String> child : unAnnotatedTree.getChildren())
+	    children.add(addParentTags2(child, unAnnotatedTree.getLabel(), parent));
+	String newTag = 
+	    parent.equals("ROOT") ? unAnnotatedTree.getLabel() : unAnnotatedTree.getLabel()+"^"+parent+"^"+gparent;
+	return new Tree<String>(newTag,
+				children);
+    }
 
 	private static Tree<String> binarizeTree(Tree<String> tree) {
 		String label = tree.getLabel();
@@ -64,8 +89,8 @@ public class TreeAnnotations {
 	public static Tree<String> unAnnotateTree(Tree<String> annotatedTree) {
 
 		// Remove intermediate nodes (labels beginning with "@"
-		// Remove all material on node labels which follow their base symbol 
-		// (cuts at the leftmost -, ^, or : character)
+		// Remove all material on node labels which follow their base symbol
+		// (cuts at the leftmost - or ^ character)
 		// Examples: a node with label @NP->DT_JJ will be spliced out, 
 		// and a node with label NP^S will be reduced to NP
 
@@ -77,6 +102,8 @@ public class TreeAnnotations {
 				});
 		Tree<String> unAnnotatedTree = 
 				(new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
-		return unAnnotatedTree;
+    Tree<String> unMarkovizedTree =
+        (new Trees.MarkovizationAnnotationStripper()).transformTree(unAnnotatedTree);
+		return unMarkovizedTree;
 	}
 }

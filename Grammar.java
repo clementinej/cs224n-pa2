@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import cs224n.ling.Tree;
 import cs224n.util.CollectionUtils;
@@ -144,13 +145,18 @@ public class Grammar {
 			new HashMap<String, List<BinaryRule>>();
 	Map<String, List<UnaryRule>> unaryRulesByChild = 
 			new HashMap<String, List<UnaryRule>>();
+        Set<String> allTokens;
 
+        // My method
+        public Set<String> getAllTags(){
+	        return allTokens;
+        }
 	/* Rules in grammar are indexed by child for easy access when
 	 * doing bottom up parsing. */
 	public List<BinaryRule> getBinaryRulesByLeftChild(String leftChild) {
 		return CollectionUtils.getValueList(binaryRulesByLeftChild, leftChild);
 	}
-
+        
 	public List<BinaryRule> getBinaryRulesByRightChild(String rightChild) {
 		return CollectionUtils.getValueList(binaryRulesByRightChild, rightChild);
 	}
@@ -215,6 +221,7 @@ public class Grammar {
 			binaryRule.setScore(binaryProbability);
 			addBinary(binaryRule);
 		}
+		this.allTokens = symbolCounter.keySet();
 	}
 
 	private void tallyTree(Tree<String> tree, Counter<String> symbolCounter,
@@ -232,9 +239,6 @@ public class Grammar {
 			symbolCounter.incrementCount(tree.getLabel(), 1.0);
 			binaryRuleCounter.incrementCount(binaryRule, 1.0);
 		}
-        System.out.println("num children " + tree.getChildren().size());
-        System.out.println("children " + tree.getChildren() + "\n");
-        System.out.println("parent " + tree.getLabel());
 		if (tree.getChildren().size() < 1 || tree.getChildren().size() > 2) {
 			throw new RuntimeException("Attempted to construct a Grammar with an illegal tree: "+tree);
 		}
