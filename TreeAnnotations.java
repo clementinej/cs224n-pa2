@@ -25,8 +25,13 @@ public class TreeAnnotations {
 
 		// TODO : mark nodes with the label of their parent nodes, giving a second
 		// order vertical markov process
-	    unAnnotatedTree = addParentTags(unAnnotatedTree, unAnnotatedTree.getLabel());
+	    //unAnnotatedTree = addParentTags(unAnnotatedTree, unAnnotatedTree.getLabel());
 	    //unAnnotatedTree = addParentTags2(unAnnotatedTree, unAnnotatedTree.getLabel(),"");
+
+	    unAnnotatedTree = addParentTags3(unAnnotatedTree,
+					     unAnnotatedTree.getLabel(),
+					     "", "");
+
 		return binarizeTree(unAnnotatedTree);
 
 	}
@@ -50,6 +55,24 @@ public class TreeAnnotations {
 	    children.add(addParentTags2(child, unAnnotatedTree.getLabel(), parent));
 	String newTag = 
 	    parent.equals("ROOT") ? unAnnotatedTree.getLabel() : unAnnotatedTree.getLabel()+"^"+parent+"^"+gparent;
+	return new Tree<String>(newTag,
+				children);
+    }
+
+
+    private static Tree<String> addParentTags3(Tree<String>
+					       unAnnotatedTree, String
+					       parent, String gparent,
+					       String ggparent){
+	if (unAnnotatedTree.isLeaf()) return unAnnotatedTree;
+	List<Tree<String>> children = new ArrayList<Tree<String>>();
+	for (Tree<String> child : unAnnotatedTree.getChildren())
+	    children.add(addParentTags3(child, unAnnotatedTree.getLabel(),
+					parent, gparent));
+	String newTag = 
+	    parent.equals("ROOT") ? unAnnotatedTree.getLabel() :
+					       unAnnotatedTree.getLabel()+"^"+parent+"^"+gparent+"^"+ggparent;
+
 	return new Tree<String>(newTag,
 				children);
     }
